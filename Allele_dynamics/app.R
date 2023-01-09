@@ -10,7 +10,7 @@ library("plotly")
 ui <- fluidPage(
 
     # Application title
-    titlePanel("Old Faithful Geyser Data"),
+    titlePanel("Allele dynamics within populations"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
