@@ -6,6 +6,8 @@ library("ggplot2")
 library("plotly")
 library("shinycssloaders")
 
+source("./Allele_dynamics/functions.R")
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
@@ -18,8 +20,7 @@ ui <- fluidPage(
           
           selectInput("sc", "How do the alleles interact?",
                       c("The new allele is recessive", "The new allele is dominanat",
-                        "The alleles are codominant", "Overdominance of the hetrozygot", 
-                        "Underdominance of the heterozygot")),  
+                        "The alleles are codominant", "Over/underdominance of the hetrozygot")),  
           sliderInput("bins",
                         "Proportion of new allele:",
                         min = 1,
@@ -31,32 +32,42 @@ ui <- fluidPage(
                         max = 100000,
                         step = 100,
                         value = 10000),
-            sliderInput("s", "How goos is the new allele?:",
+            sliderInput("t", "How sucessful is the new allele?",
                         min =  -1,
                         max = 1,
                         step = 0.001,
                         value = 0.001),
-            sliderInput("t", "How sucessful is the heterozygot?:",
-                        min =  -1,
-                        max = 1,
-                        step = 0.001,
-                        value = 0.001)
+          uiOutput("ht")
         ),
 
         # Show a plot of the generated distribution
         mainPanel(
-           plotOutput("distPlot")
+           plotOutput("distPlot"),
+           plotOutput("popPlot"),
+           plotOutput("allelePlot")
         )
     )
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  
+  gen <- 3000
+  
   output$Old <- renderUI({
     sliderInput("Old", "Proportions of old allele", min = 0,
                 max = 1,
                 value = (1-(input$bins/100)), step = 0.01)
   })
+  
+  
+    output$ht <- renderUI({ if(input$sc == "Over/underdominance of the hetrozygot"){
+      sliderInput("s","How successful is the heterozygot?",
+                  min = -1,
+                  max = 1,
+                  step = 0.001,
+                  value = 0.001)} })
+  
 
     output$distPlot <- renderPlot({
         # generate bins based on input$bins from ui.R
@@ -67,6 +78,13 @@ server <- function(input, output) {
         hist(x, breaks = bins, col = 'darkgray', border = 'white',
              xlab = 'Waiting time to next eruption (in mins)',
              main = 'Histogram of waiting times')
+    })
+    
+    output$popPlot <- renderPlotly({
+      a <- input$bins
+      sc <- input$sc
+      ggplotly(p)
+    
     })
 }
 
