@@ -3,7 +3,7 @@
 #t selection coefficient of homozygote, s selection coefficient for heterozygote
 overd <- function(q,s,t){
   p <- 1-q
-  dq <- (p*q(s-(2*q*s)+t*q))/(1+(2*s*q*p)-t*(q^2))
+  dq <- (p*q*(s-(2*q*s)+t*q))/(1+(2*s*q*p)-t*(q^2))
   nq <- q +dq
   return(nq)
   
@@ -51,24 +51,125 @@ co <- function(q,t){
 
 
 #data and plots
-
-dnp <- function(qd,td,sd=NULL, scd, g){
+dnp <- function(qd,td,sd=NULL, scd, g, ps){
+  require("dplyr")
+  require("tidyr")
+  require("ggplot2")
+  #Create a vector a that would contain the proportions of the new allele
   a <- rep(0,g)
-  generations <- seq(1, g, by = 1)
-  i=1
   
-  if(sc == "The new allele is recessive"){
-    for (i in seq_along(a)) {
-      
+  #Create the vector generations that would hold the number of generations passed
+  generations <- seq(1, g, by = 1)
+  
+  
+  i=1
+  #Loop to ge the cange in q over time depending on the scenario
+  for(i in seq_along(generations)){
+    if(scd == "The new allele is recessive"){
       if(i == 1){
-        a[i] <- qd
+          a[i] <- qd
+        } else {
+          a[i] <- res(q = a[i-1], t = td)
+        }
+    } else {
+      if(scd == "The new allele is dominanat"){
+        if(i == 1){
+          a[i] <- qd
+        } else {
+          a[i] <- dom(q = a[i-1], t = td)
+        }
       } else {
-        a[i] <- a[i-1] + res(q = qd, t = td)
+        if(scd == "The alleles are codominant"){
+          if(i == 1){
+            a[i] <- qd
+          } else {
+            a[i] <- co(q = a[i-1], t = td)
+          }
+        } else {if(scd == "Over/underdominance of the hetrozygot"){
+          if( i == 1){
+            a[i] <- qd
+          } else {
+            a[i] <- overd(q = a[i-1], s = sd, t = td)}
+          }
+        }
       }
-      
     }
-    
   }
+    
+  
+  # proportion of p
+  if(scd != "Over/underdominance of the hetrozygot"){
+    a <- a[1 : which(a > 0.999)[1]]
+    }else{ a <- a}
+  A <- 1 - a
+  generations <- generations[1:length(a)]
+  
+  #genotypes proportion
+  prop_AA <- A^2
+  prop_aa <- a^2
+  prop_Aa <- 2*a*A
+  
+  #genotype size
+  
+  size_AA <- ps*prop_AA
+  size_aa <- ps*prop_aa
+  size_Aa <- ps*prop_Aa
+  
+  #make dataframes
+  
+  df_allele <- tibble(a,A, gen = generations) %>% 
+    gather(key = "Allele", value = "Proportion", -gen)
+  
+  df_gtype_prop <- tibble(AA = prop_AA, aa = prop_aa, Aa = prop_Aa, gen = generations) %>%
+    gather(key = "Genotype", value = "Proportion", -gen)
+  
+  df_gtyp_size <- tibble(AA = size_AA, aa = size_aa, Aa = size_Aa, gen = generations) %>%
+    gather(key = "Genotype", value = "Size", -gen)
+  
+  #chi square get generation while loop
+  z = 1
+  
+  
+  
+  #Plot allele
+  p_alleles <- ggplot(df_allele, aes(
+    x = gen, y = Proportion, color = Allele))+
+    geom_line(linewidth=0.5)+
+    geom_point()+
+    theme_bw(base_size = 16)+
+    scale_color_brewer(palette = "Dark2")+
+    xlab("Generations")+
+    ylab("Allele proportion within the population")
+  
+  #Plot gen_freq
+  
+  p_gen_freq <- ggplot(df_gtype_prop, aes(
+    x = gen, y = Proportion, color = Genotype))+
+    geom_line(linewidth=0.5)+
+    geom_point()+
+    theme_bw(base_size = 16)+
+    scale_color_brewer(palette = "Dark2")+
+    xlab("Generations")+
+    ylab("Genotype proportion within the population")
+  
+  #Plot size
+  
+  p_gen_size <- ggplot(df_gtyp_size, aes(
+    x = gen, y = Size, fill = Genotype,color = Genotype))+
+    geom_area()+
+    #geom_line(linewidth = 0.5)+
+    #geom_point()+
+    theme_bw(base_size = 16)+
+    scale_color_brewer(palette = "Dark2")+
+    scale_fill_brewer(palette = "Dark2")+
+    xlab("Generations")+
+    ylab("Number of individuals")
+  
+  #return the results list
+  
+  results <- list(df_allele, df_gtype_prop, df_gtyp_size, 
+                  p_alleles, p_gen_freq, p_gen_size)
+  
   
   return(results)
 }

@@ -1,12 +1,11 @@
+#Load libraries
+libs <- c("shiny","dplyr","tidyr","ggplot2","plotly",
+          "shinycssloaders","RColorBrewer")
 
-library("shiny")
-library("dplyr")
-library("tidyr")
-library("ggplot2")
-library("plotly")
-library("shinycssloaders")
+lapply(libs, library, character.only = TRUE)
 
-source("./Allele_dynamics/functions.R")
+source("functions.R")
+
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -20,7 +19,8 @@ ui <- fluidPage(
           
           selectInput("sc", "How do the alleles interact?",
                       c("The new allele is recessive", "The new allele is dominanat",
-                        "The alleles are codominant", "Over/underdominance of the hetrozygot")),  
+                        "The alleles are codominant", "Overderdominance of the hetrozygot",
+                        "Underdominance of heterozygot")),  
           sliderInput("bins",
                         "Proportion of new allele:",
                         min = 1,
@@ -35,9 +35,10 @@ ui <- fluidPage(
             sliderInput("t", "How sucessful is the new allele?",
                         min =  -1,
                         max = 1,
-                        step = 0.001,
-                        value = 0.001),
-          uiOutput("ht")
+                        step = 0.01,
+                        value = 0.01),
+          uiOutput("ht"),
+          uiOutput("ud")
         ),
 
         # Show a plot of the generated distribution
@@ -61,12 +62,20 @@ server <- function(input, output) {
   })
   
   
-    output$ht <- renderUI({ if(input$sc == "Over/underdominance of the hetrozygot"){
+    output$ht <- renderUI({ if(input$sc == "Overderdominance of the hetrozygot"){
       sliderInput("s","How successful is the heterozygot?",
-                  min = -1,
+                  min = 0.01,
                   max = 1,
-                  step = 0.001,
-                  value = 0.001)} })
+                  step = 0.005,
+                  value = 0.01)} else {
+                    if(input$sc == "Underdominance of heterozygot"){
+                      sliderInput("s", "How terrible is the heterozygot?",
+                                  min = -1,
+                                  max = -0.01,
+                                  step = 0.005,
+                                  value = -0.01)
+                    }
+                  } })
   
 
     output$distPlot <- renderPlot({
@@ -81,6 +90,8 @@ server <- function(input, output) {
     })
     
     output$popPlot <- renderPlotly({
+      
+      #add if else statement to account for the need for t and s
       a <- input$bins
       sc <- input$sc
       ggplotly(p)
