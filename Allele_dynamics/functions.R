@@ -63,7 +63,7 @@ dnp <- function(qd,td,sd=NULL, scd, g, ps){
   
   
   i=1
-  #Loop to ge the cange in q over time depending on the scenario
+  #Loop to get the change in q over time depending on the scenario
   for(i in seq_along(generations)){
     if(scd == "The new allele is recessive"){
       if(i == 1){
@@ -85,7 +85,8 @@ dnp <- function(qd,td,sd=NULL, scd, g, ps){
           } else {
             a[i] <- co(q = a[i-1], t = td)
           }
-        } else {if(scd == "Over/underdominance of the hetrozygot"){
+        } else {if(scd == "Overderdominance of the heterozygot"|
+                   scd == "Underdominance of the heterozygot"){ 
           if( i == 1){
             a[i] <- qd
           } else {
@@ -97,9 +98,10 @@ dnp <- function(qd,td,sd=NULL, scd, g, ps){
   }
     
   
-  # proportion of p
-  if(scd != "Over/underdominance of the hetrozygot"){
-    a <- a[1 : which(a > 0.999)[1]]
+  # shrinking the dataset
+  #Need to filter the heterozygot and negative values
+  if(!grepl("heterozygot", scd) & td > 0){
+    a <- a[1 : which(round(a,3) > 0.99)[10]]
     }else{ a <- a}
   A <- 1 - a
   generations <- generations[1:length(a)]
@@ -126,8 +128,21 @@ dnp <- function(qd,td,sd=NULL, scd, g, ps){
   df_gtyp_size <- tibble(AA = size_AA, aa = size_aa, Aa = size_Aa, gen = generations) %>%
     gather(key = "Genotype", value = "Size", -gen)
   
-  #chi square get generation while loop
-  z = 1
+  #chi square get generation for loop
+  
+  gts <- df_gtyp_size %>% pivot_wider(names_from = Genotype, values_from = Size)
+  prop <- as.numeric(c(prop_AA[1], prop_aa[1], prop_Aa[1]))
+  
+  for (gn in seq_along(gts$gen)) {
+    csq2 <- chisq.test(x = round(as.numeric(gts[gn,2:4]),0), 
+                       p = prop)
+    if(round(csq2$statistic, 3) >= 7.373 ){
+      HWE <- gn
+      break
+    }
+    
+  }
+ 
   
   
   
@@ -136,10 +151,12 @@ dnp <- function(qd,td,sd=NULL, scd, g, ps){
     x = gen, y = Proportion, color = Allele))+
     geom_line(linewidth=0.5)+
     geom_point()+
+    geom_vline(xintercept = HWE, linetype = 2, color = "black")+
     theme_bw(base_size = 16)+
     scale_color_brewer(palette = "Dark2")+
     xlab("Generations")+
-    ylab("Allele proportion within the population")
+    ylab("Allele proportion within the population")+
+    ggtitle("Change in allele proportion")
   
   #Plot gen_freq
   
@@ -147,23 +164,26 @@ dnp <- function(qd,td,sd=NULL, scd, g, ps){
     x = gen, y = Proportion, color = Genotype))+
     geom_line(linewidth=0.5)+
     geom_point()+
+    geom_vline(xintercept = HWE, linetype = 2, color = "black")+
     theme_bw(base_size = 16)+
     scale_color_brewer(palette = "Dark2")+
     xlab("Generations")+
-    ylab("Genotype proportion within the population")
+    ylab("Genotype proportion within the population")+
+    ggtitle("Change in genotype proportion")
   
   #Plot size
   
   p_gen_size <- ggplot(df_gtyp_size, aes(
     x = gen, y = Size, fill = Genotype,color = Genotype))+
-    geom_area()+
-    #geom_line(linewidth = 0.5)+
-    #geom_point()+
+    geom_line(linewidth = 0.5)+
+    geom_point()+
+    geom_vline(xintercept = HWE, linetype = 2, color = "black")+
     theme_bw(base_size = 16)+
     scale_color_brewer(palette = "Dark2")+
     scale_fill_brewer(palette = "Dark2")+
     xlab("Generations")+
-    ylab("Number of individuals")
+    ylab("Number of individuals")+
+    ggtitle("Change in number of individuals per genotype")
   
   #return the results list
   
