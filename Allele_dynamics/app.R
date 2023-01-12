@@ -1,8 +1,11 @@
-#Load libraries
-libs <- c("shiny","dplyr","tidyr","ggplot2","plotly",
-          "shinycssloaders","RColorBrewer")
 
-lapply(libs, library, character.only = TRUE)
+library(shiny)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(plotly)
+library(shinycssloaders)
+library(RColorBrewer)
 
 source("functions.R")
 
@@ -19,7 +22,7 @@ ui <- fluidPage(
           
           selectInput("sc", "How do the alleles interact?",
                       c("The new allele is recessive", "The new allele is dominanat",
-                        "The alleles are codominant", "Overderdominance of the heterozygot",
+                        "The alleles are codominant", "Overdominance of the heterozygot",
                         "Underdominance of the heterozygot")),  
           
           sliderInput("bins",
@@ -61,13 +64,15 @@ server <- function(input, output) {
   genr <- 5000
   
   output$Old <- renderUI({
-    sliderInput("Old", "Proportions of old allele", min = 0.1,
+    sliderInput("Old", 
+                "Proportions of old allele (just a remider this doesn't do anyhting):", 
+                min = 0.1,
                 max = 0.9,
                 value = (1-(input$bins)), step = 0.01)
   })
   
   
-    output$ht <- renderUI({ if(input$sc == "Overderdominance of the heterozygot"){
+    output$ht <- renderUI({ if(input$sc == "Overdominance of the heterozygot"){
       sliderInput("s","How successful is the heterozygot?",
                   min = 0.01,
                   max = 1,
