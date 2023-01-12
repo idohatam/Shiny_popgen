@@ -14,6 +14,7 @@ overeq <- function(s,t){
   
   qeq <- s/(2*s-t)
   peq <- 1-qeq
+  return(c(qeq,peq))
 }
 
 #Allele dynamics in the case of positive recessive 
@@ -52,9 +53,6 @@ co <- function(q,t){
 
 #data and plots
 dnp <- function(qd,td,sd=NULL, scd, g, ps){
-  require("dplyr")
-  require("tidyr")
-  require("ggplot2")
   #Create a vector a that would contain the proportions of the new allele
   a <- rep(0,g)
   
@@ -85,7 +83,7 @@ dnp <- function(qd,td,sd=NULL, scd, g, ps){
           } else {
             a[i] <- co(q = a[i-1], t = td)
           }
-        } else {if(scd == "Overderdominance of the heterozygot"|
+        } else {if(scd == "Overdominance of the heterozygot"|
                    scd == "Underdominance of the heterozygot"){ 
           if( i == 1){
             a[i] <- qd
@@ -102,7 +100,37 @@ dnp <- function(qd,td,sd=NULL, scd, g, ps){
   #Need to filter the heterozygot and negative values
   if(!grepl("heterozygot", scd) & td > 0){
     a <- a[1 : which(round(a,3) > 0.99)[10]]
-    }else{ a <- a}
+  }else{
+      if(!grepl("heterozygot", scd) & td < 0){
+        a <- a[1:which(round(a,4) < 0.03)[3]]
+      } else{if(grepl("Overdominance", scd)){
+        
+        eq <- overeq(s = sd, t = td)
+        
+        if(eq[1] == 1){
+          a <- a[1:which((1-round(a,4)) < 0.035)[3]]
+        }else{
+          a <- a[1:which(round(a,2) == round(eq[1],2))[3]]
+        }
+      }else{
+        if(grepl("Underdominance", scd) & td > 0){
+          
+          if(max(a) > qd){
+            a <- a[1:which(round(a,2) > 0.99)[10]]  
+          } else {
+            a <- a[1:which(round(a,4) < 0.03)[10]]
+          }
+          
+        } else {
+          if(grepl("Underdominance", scd) & td < 0){
+            a <- a[1:which(round(a,4)<0.001)[3]]
+          }else{
+            a <- a
+          }
+        }
+         }
+        }
+    }
   A <- 1 - a
   generations <- generations[1:length(a)]
   
@@ -113,9 +141,9 @@ dnp <- function(qd,td,sd=NULL, scd, g, ps){
   
   #genotype size
   
-  size_AA <- ps*prop_AA
-  size_aa <- ps*prop_aa
-  size_Aa <- ps*prop_Aa
+  size_AA <- round(ps*prop_AA, 0)
+  size_aa <- round(ps*prop_aa, 0)
+  size_Aa <- round(ps*prop_Aa, 0)
   
   #make dataframes
   
